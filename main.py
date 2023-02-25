@@ -9,9 +9,9 @@ COMIC_LINK = 'https://xkcd.com/'
 COMIC_DIR = 'Comics'
 
 
-def get_comic_parametrs(comin_number):
+def get_comic_parametrs(comic_number):
     try:
-        response = requests.get(f'{COMIC_LINK}{str(comin_number)}/info.0.json')
+        response = requests.get(f'{COMIC_LINK}{str(comic_number)}/info.0.json')
         response.raise_for_status()
         return response
     except requests.exceptions.HTTPError as error:
@@ -22,8 +22,7 @@ def get_comic_parametrs(comin_number):
 def save_comic(comic_img_url, file_dir):
     file_path = Path.cwd() / file_dir
     file_name = PurePosixPath(parse.urlsplit(comic_img_url).path).name
-    payload = None
-    response = requests.get(comic_img_url, params=payload)
+    response = requests.get(comic_img_url)
     response.raise_for_status()
     Path(file_path).mkdir(parents=True, exist_ok=True)
     with open(Path.joinpath(file_path, file_name), 'wb') as file:
@@ -31,33 +30,12 @@ def save_comic(comic_img_url, file_dir):
     return file_name
 
 
-# def format_date(str_date):
-#     date_ = datetime.strptime(str_date, "%d.%m.%Y").date()
-#     return date_, date_.strftime("%Y-%m-%d"), date_.strftime("%Y/%m/%d")
-
-
-def get_groups(vk_access_token, vk_group_id):
-    url = 'https://api.vk.com/method/groups.get'
+def make_request_to_vk(req_type, vk_access_token, url, payload):
     headers = {'Authorization': f'Bearer {vk_access_token}'}
-    payload = {
-        'group_id': vk_group_id,
-        'v': 5.131,
-    }
-    response = requests.get(url, headers=headers, params=payload)
-    response.raise_for_status()
-    return response.json()
-
-
-def get_request_to_vk(vk_access_token, url, payload):
-    headers = {'Authorization': f'Bearer {vk_access_token}'}
-    response = requests.get(url, headers=headers, params=payload)
-    response.raise_for_status()
-    return response
-
-
-def post_request_to_vk(vk_access_token, url, payload):
-    headers = {'Authorization': f'Bearer {vk_access_token}'}
-    response = requests.post(url, headers=headers, params=payload)
+    if req_type == 'get':
+        response = requests.get(url, headers=headers, params=payload)
+    else:
+        response = requests.post(url, headers=headers, params=payload)
     response.raise_for_status()
     return response
 
@@ -68,7 +46,7 @@ def get_photos_wall_upload_server(vk_access_token, vk_group_id):
         'group_id': vk_group_id,
         'v': 5.131,
     }
-    response = get_request_to_vk(vk_access_token, url, payload).json()
+    response = make_request_to_vk('get', vk_access_token, url, payload).json()
     return response['response']['album_id'], response['response']['upload_url']
 
 
@@ -85,7 +63,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
         'hash': transfer_file_params['hash'],
         'v': 5.131,
     }
-    save_file_params = get_request_to_vk(vk_access_token, url, payload).json()
+    save_file_params = make_request_to_vk('get', vk_access_token, url, payload).json()
 
     url = 'https://api.vk.com/method/wall.post'
     payload = {
@@ -94,7 +72,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
         'message': comic_alt,
         'v': 5.131,
     }
-    post_request_to_vk(vk_access_token, url, payload).json()
+    make_request_to_vk('post', vk_access_token, url, payload).json()
 
 
 def main():
