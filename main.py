@@ -94,8 +94,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
         'message': comic_alt,
         'v': 5.131,
     }
-    post_params = post_request_to_vk(vk_access_token, url, payload).json()
-    print(post_params)
+    post_request_to_vk(vk_access_token, url, payload).json()
 
 
 def main():
@@ -118,6 +117,8 @@ def main():
     file_path = Path.cwd() / COMIC_DIR
     with open(Path.joinpath(file_path, comic_name), 'rb') as photo:
         post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt)
+
+    Path(Path.joinpath(file_path, comic_name)).unlink()
 
 
 if __name__ == "__main__":
