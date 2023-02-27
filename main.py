@@ -23,9 +23,10 @@ def get_photos_wall_upload_server(vk_access_token, vk_group_id):
     return response['response']['album_id'], response['response']['upload_url']
 
 
-def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
-    response = requests.post(upload_url, files={'photo': photo})
-    response.raise_for_status()
+def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_path, comic_file_name):
+    with open(Path.joinpath(file_path, comic_file_name), 'rb') as photo:
+        response = requests.post(upload_url, files={'photo': photo})
+        response.raise_for_status()
     transfer_file_params = response.json()
 
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
@@ -50,6 +51,8 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
     }
     response = requests.post(url, headers=headers, params=payload)
     response.raise_for_status()
+
+    Path(Path.joinpath(file_path, comic_file_name)).unlink()
 
 
 def get_random_comic(comic_dir):
@@ -89,10 +92,8 @@ def main():
     print(f'Публикуем комикс № {random_comic_id}')
     album_id, upload_url = get_photos_wall_upload_server(vk_access_token, vk_group_id)
     file_path = Path.cwd() / COMIC_DIR
-    with open(Path.joinpath(file_path, comic_file_name), 'rb') as photo:
-        post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt)
 
-    Path(Path.joinpath(file_path, comic_file_name)).unlink()
+    post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_path, comic_file_name)
 
 
 if __name__ == "__main__":
