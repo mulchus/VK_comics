@@ -68,10 +68,6 @@ def get_random_comic():
     return comic_parametrs, comic, random_comic_id
 
 
-def delete_comic(file_path, comic_file_name):
-    Path(Path.joinpath(file_path, comic_file_name)).unlink()
-
-
 def main():
     env = Env()
     env.read_env()
@@ -93,7 +89,7 @@ def main():
     except requests.exceptions.HTTPError as error:
         print(f'Ошибка сети.\nОшибка {error}')
     finally:
-        delete_comic(file_path, comic_file_name)
+        Path(Path.joinpath(file_path, comic_file_name)).unlink()
 
 
 if __name__ == "__main__":
