@@ -8,14 +8,28 @@ from random import randint
 COMIC_LINK = 'https://xkcd.com/'
 
 
+def checking_vk_request_error(response):
+    response = response.json()
+    if 'error' in response:
+        error_message = response['error']['error_msg']
+        if response['error']['error_code']:
+            e_code = response['error']['error_code']
+    raise HTTPError(e.url, e.code, "your message.", e.hdrs, e.fp)
+    raise HTTPError()
+
+    return error_code, error_message
+
+
 def get_photos_wall_upload_server(vk_access_token, vk_group_id):
     url = 'https://api.vk.com/method/photos.getWallUploadServer'
     headers = {'Authorization': f'Bearer {vk_access_token}'}
     payload = {
         'group_id': vk_group_id,
-        'v': 5.131,
+        # 'v': 5.131,
     }
     response = requests.get(url, headers=headers, params=payload)
+
+    print(response.text)
     response.raise_for_status()
     response = response.json()
     return response['response']['album_id'], response['response']['upload_url']
