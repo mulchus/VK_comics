@@ -26,7 +26,7 @@ def get_photos_wall_upload_server(vk_access_token, vk_group_id):
 def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_path, comic_file_name):
     with open(Path.joinpath(file_path, comic_file_name), 'rb') as photo:
         response = requests.post(upload_url, files={'photo': photo})
-        response.raise_for_status()
+    response.raise_for_status()
     transfer_file_params = response.json()
 
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
@@ -67,12 +67,11 @@ def get_random_comic(comic_dir):
 
     file_path = Path.cwd() / comic_dir
     comic_file_name = PurePosixPath(parse.urlsplit(comic_parametrs['img']).path).name
-    response = requests.get(comic_parametrs['img'])
-    response.raise_for_status()
+    comic = requests.get(comic_parametrs['img'])
+    comic.raise_for_status()
 
-    Path(file_path).mkdir(parents=True, exist_ok=True)
     with open(Path.joinpath(file_path, comic_file_name), 'wb') as file:
-        file.write(response.content)
+        file.write(comic.content)
 
     return comic_file_name, comic_parametrs['alt'], random_comic_id
 
@@ -82,6 +81,8 @@ def main():
     env.read_env()
     vk_access_token = env.str('VK_ACCESS_TOKEN')
     vk_group_id = env.int('VK_GROUP_ID')
+
+    Path(Path.cwd() / COMIC_DIR).mkdir(parents=True, exist_ok=True)
 
     try:
         comic_file_name, comic_alt, random_comic_id = get_random_comic(COMIC_DIR)
