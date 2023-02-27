@@ -3,11 +3,9 @@ from urllib import parse
 from pathlib import Path, PurePosixPath
 from environs import Env
 from random import randint
-import sys
 
 
 COMIC_LINK = 'https://xkcd.com/'
-COMIC_DIR = 'Comics'
 
 
 def get_photos_wall_upload_server(vk_access_token, vk_group_id):
@@ -52,28 +50,26 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
     response = requests.post(url, headers=headers, params=payload)
     response.raise_for_status()
 
-    Path(Path.joinpath(file_path, comic_file_name)).unlink()
 
-
-def get_random_comic(comic_dir):
+def get_random_comic():
     last_comic = requests.get(f'{COMIC_LINK}/info.0.json')
     last_comic.raise_for_status()
     last_comic_id = last_comic.json()['num']
+
     random_comic_id = randint(1, last_comic_id)
 
     comic_parametrs = requests.get(f'{COMIC_LINK}{str(random_comic_id)}/info.0.json')
     comic_parametrs.raise_for_status()
     comic_parametrs = comic_parametrs.json()
 
-    file_path = Path.cwd() / comic_dir
-    comic_file_name = PurePosixPath(parse.urlsplit(comic_parametrs['img']).path).name
     comic = requests.get(comic_parametrs['img'])
     comic.raise_for_status()
 
-    with open(Path.joinpath(file_path, comic_file_name), 'wb') as file:
-        file.write(comic.content)
+    return comic_parametrs, comic, random_comic_id
 
-    return comic_file_name, comic_parametrs['alt'], random_comic_id
+
+def delete_comic(file_path, comic_file_name):
+    Path(Path.joinpath(file_path, comic_file_name)).unlink()
 
 
 def main():
@@ -82,19 +78,22 @@ def main():
     vk_access_token = env.str('VK_ACCESS_TOKEN')
     vk_group_id = env.int('VK_GROUP_ID')
 
-    Path(Path.cwd() / COMIC_DIR).mkdir(parents=True, exist_ok=True)
+    file_path = Path.cwd()
+    Path(file_path).mkdir(parents=True, exist_ok=True)
+
+    comic_parametrs, comic, random_comic_id = get_random_comic()
+    comic_file_name = PurePosixPath(parse.urlsplit(comic_parametrs['img']).path).name
 
     try:
-        comic_file_name, comic_alt, random_comic_id = get_random_comic(COMIC_DIR)
+        with open(Path.joinpath(file_path, comic_file_name), 'wb') as file:
+            file.write(comic.content)
+        print(f'Публикуем комикс № {random_comic_id}')
+        album_id, upload_url = get_photos_wall_upload_server(vk_access_token, vk_group_id)
+        post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_parametrs['alt'], file_path, comic_file_name)
     except requests.exceptions.HTTPError as error:
-        print(f'Указан неверный номер комикса.\nОшибка {error}')
-        sys.exit()
-
-    print(f'Публикуем комикс № {random_comic_id}')
-    album_id, upload_url = get_photos_wall_upload_server(vk_access_token, vk_group_id)
-    file_path = Path.cwd() / COMIC_DIR
-
-    post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_path, comic_file_name)
+        print(f'Ошибка сети.\nОшибка {error}')
+    finally:
+        delete_comic(file_path, comic_file_name)
 
 
 if __name__ == "__main__":
