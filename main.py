@@ -1,5 +1,6 @@
 import requests
 from urllib import parse
+from urllib.error import HTTPError
 from pathlib import Path, PurePosixPath
 from environs import Env
 from random import randint
@@ -9,15 +10,12 @@ COMIC_LINK = 'https://xkcd.com/'
 
 
 def checking_vk_request_error(response):
-    response = response.json()
+    error_code = 0
     if 'error' in response:
         error_message = response['error']['error_msg']
         if response['error']['error_code']:
-            e_code = response['error']['error_code']
-    raise HTTPError(e.url, e.code, "your message.", e.hdrs, e.fp)
-    raise HTTPError()
-
-    return error_code, error_message
+            error_code = response['error']['error_code']
+        raise HTTPError('Ошибка сервиса ВКонтакте', error_code, error_message, error_message, None)
 
 
 def get_photos_wall_upload_server(vk_access_token, vk_group_id):
@@ -25,13 +23,12 @@ def get_photos_wall_upload_server(vk_access_token, vk_group_id):
     headers = {'Authorization': f'Bearer {vk_access_token}'}
     payload = {
         'group_id': vk_group_id,
-        # 'v': 5.131,
+        'v': 5.131,
     }
     response = requests.get(url, headers=headers, params=payload)
-
-    print(response.text)
     response.raise_for_status()
     response = response.json()
+    checking_vk_request_error(response)
     return response['response']['album_id'], response['response']['upload_url']
 
 
@@ -53,6 +50,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
     response = requests.get(url, headers=headers, params=payload)
     response.raise_for_status()
     save_file_params = response.json()
+    checking_vk_request_error(save_file_params)
 
     url = 'https://api.vk.com/method/wall.post'
     payload = {
@@ -63,6 +61,8 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
     }
     response = requests.post(url, headers=headers, params=payload)
     response.raise_for_status()
+    response = response.json()
+    checking_vk_request_error(response)
 
 
 def get_random_comic():
