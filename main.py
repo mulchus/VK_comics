@@ -10,23 +10,16 @@ COMIC_LINK = 'https://xkcd.com/'
 COMIC_DIR = 'Comics'
 
 
-def make_request_to_vk(req_type, vk_access_token, url, payload):
-    headers = {'Authorization': f'Bearer {vk_access_token}'}
-    if req_type == 'get':
-        response = requests.get(url, headers=headers, params=payload)
-    else:
-        response = requests.post(url, headers=headers, params=payload)
-    response.raise_for_status()
-    return response
-
-
 def get_photos_wall_upload_server(vk_access_token, vk_group_id):
     url = 'https://api.vk.com/method/photos.getWallUploadServer'
+    headers = {'Authorization': f'Bearer {vk_access_token}'}
     payload = {
         'group_id': vk_group_id,
         'v': 5.131,
     }
-    response = make_request_to_vk('get', vk_access_token, url, payload).json()
+    response = requests.get(url, headers=headers, params=payload)
+    response.raise_for_status()
+    response = response.json()
     return response['response']['album_id'], response['response']['upload_url']
 
 
@@ -36,6 +29,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
     transfer_file_params = response.json()
 
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
+    headers = {'Authorization': f'Bearer {vk_access_token}'}
     payload = {
         'group_id': vk_group_id,
         'server': transfer_file_params['server'],
@@ -43,7 +37,9 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
         'hash': transfer_file_params['hash'],
         'v': 5.131,
     }
-    save_file_params = make_request_to_vk('get', vk_access_token, url, payload).json()
+    response = requests.get(url, headers=headers, params=payload)
+    response.raise_for_status()
+    save_file_params = response.json()
 
     url = 'https://api.vk.com/method/wall.post'
     payload = {
@@ -52,7 +48,8 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, photo, comic_alt):
         'message': comic_alt,
         'v': 5.131,
     }
-    make_request_to_vk('post', vk_access_token, url, payload).json()
+    response = requests.post(url, headers=headers, params=payload)
+    response.raise_for_status()
 
 
 def get_random_comic(comic_dir):
