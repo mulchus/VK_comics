@@ -56,12 +56,15 @@ def post_wall_photo(vk_access, vk_group_id, comic_alt, save_file_params):
     url = 'https://api.vk.com/method/wall.post'
     payload = {
         'attachments': f"photo{save_file_params['response'][0]['owner_id']}_{save_file_params['response'][0]['id']}",
-        'owner_id': f'-{vk_group_id}',
+        'owner_id': int(f'-{vk_group_id}'),
+        'from_group': 1,
         'message': comic_alt,
         'v': 5.131,
     }
+    print(payload)
     response = requests.post(url, headers=vk_access, params=payload)
     response.raise_for_status()
+    print(response.headers)
     response = response.json()
     check_vk_request_error(response)
 
@@ -86,9 +89,11 @@ def get_random_comic():
 def main():
     env = Env()
     env.read_env()
-    vk_access_token = env.str('VK_ACCESS_TOKEN')
+    vk_my_access_token = env.str('VK_MY_ACCESS_TOKEN')
+    vk_group_access_token = env.str('VK_GROUP_ACCESS_TOKEN')
     vk_group_id = env.int('VK_GROUP_ID')
-    vk_access = {'Authorization': f'Bearer {vk_access_token}'}
+    vk_my_access = {'Authorization': f'Bearer {vk_my_access_token}'}
+    vk_group_access = {'Authorization': f'Bearer {vk_group_access_token}'}
 
     file_path = Path.cwd()
     Path(file_path).mkdir(parents=True, exist_ok=True)
@@ -100,9 +105,9 @@ def main():
         with open(Path.joinpath(file_path, comic_file_name), 'wb') as file:
             file.write(comic.content)
         print(f'Публикуем комикс № {random_comic_id}')
-        album_id, upload_url = get_photos_wall_upload_server(vk_access, vk_group_id)
-        save_file_params = save_photo_to_wall(vk_access, vk_group_id, upload_url, file_path, comic_file_name)
-        post_wall_photo(vk_access, vk_group_id, comic_parameters['alt'], save_file_params)
+        album_id, upload_url = get_photos_wall_upload_server(vk_group_access, vk_group_id)
+        save_file_params = save_photo_to_wall(vk_group_access, vk_group_id, upload_url, file_path, comic_file_name)
+        post_wall_photo(vk_group_access, vk_group_id, comic_parameters['alt'], save_file_params)
     except requests.exceptions.HTTPError as error:
         print(f'Ошибка сети.\nОшибка {error}')
     finally:
