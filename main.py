@@ -9,7 +9,7 @@ from random import randint
 COMIC_LINK = 'https://xkcd.com/'
 
 
-def checking_vk_request_error(response):
+def check_vk_request_error(response):
     error_code = 0
     if 'error' in response:
         error_message = response['error']['error_msg']
@@ -28,7 +28,7 @@ def get_photos_wall_upload_server(vk_access_token, vk_group_id):
     response = requests.get(url, headers=headers, params=payload)
     response.raise_for_status()
     response = response.json()
-    checking_vk_request_error(response)
+    check_vk_request_error(response)
     return response['response']['album_id'], response['response']['upload_url']
 
 
@@ -50,7 +50,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
     response = requests.get(url, headers=headers, params=payload)
     response.raise_for_status()
     save_file_params = response.json()
-    checking_vk_request_error(save_file_params)
+    check_vk_request_error(save_file_params)
 
     url = 'https://api.vk.com/method/wall.post'
     payload = {
@@ -62,7 +62,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
     response = requests.post(url, headers=headers, params=payload)
     response.raise_for_status()
     response = response.json()
-    checking_vk_request_error(response)
+    check_vk_request_error(response)
 
 
 def get_random_comic():
@@ -72,14 +72,14 @@ def get_random_comic():
 
     random_comic_id = randint(1, last_comic_id)
 
-    comic_parametrs = requests.get(f'{COMIC_LINK}{str(random_comic_id)}/info.0.json')
-    comic_parametrs.raise_for_status()
-    comic_parametrs = comic_parametrs.json()
+    comic_parameters = requests.get(f'{COMIC_LINK}{str(random_comic_id)}/info.0.json')
+    comic_parameters.raise_for_status()
+    comic_parameters = comic_parameters.json()
 
-    comic = requests.get(comic_parametrs['img'])
+    comic = requests.get(comic_parameters['img'])
     comic.raise_for_status()
 
-    return comic_parametrs, comic, random_comic_id
+    return comic_parameters, comic, random_comic_id
 
 
 def main():
@@ -91,15 +91,15 @@ def main():
     file_path = Path.cwd()
     Path(file_path).mkdir(parents=True, exist_ok=True)
 
-    comic_parametrs, comic, random_comic_id = get_random_comic()
-    comic_file_name = PurePosixPath(parse.urlsplit(comic_parametrs['img']).path).name
+    comic_parameters, comic, random_comic_id = get_random_comic()
+    comic_file_name = Path(parse.urlsplit(comic_parameters['img']).path).name
 
     try:
         with open(Path.joinpath(file_path, comic_file_name), 'wb') as file:
             file.write(comic.content)
         print(f'Публикуем комикс № {random_comic_id}')
         album_id, upload_url = get_photos_wall_upload_server(vk_access_token, vk_group_id)
-        post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_parametrs['alt'], file_path, comic_file_name)
+        post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_parameters['alt'], file_path, comic_file_name)
     except requests.exceptions.HTTPError as error:
         print(f'Ошибка сети.\nОшибка {error}')
     finally:
