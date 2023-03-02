@@ -1,7 +1,7 @@
 import requests
 from urllib import parse
 from urllib.error import HTTPError
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from environs import Env
 from random import randint
 
@@ -18,28 +18,26 @@ def check_vk_request_error(response):
         raise HTTPError('Ошибка сервиса ВКонтакте', error_code, error_message, error_message, None)
 
 
-def get_photos_wall_upload_server(vk_access_token, vk_group_id):
+def get_photos_wall_upload_server(vk_access, vk_group_id):
     url = 'https://api.vk.com/method/photos.getWallUploadServer'
-    headers = {'Authorization': f'Bearer {vk_access_token}'}
     payload = {
         'group_id': vk_group_id,
         'v': 5.131,
     }
-    response = requests.get(url, headers=headers, params=payload)
+    response = requests.get(url, headers=vk_access, params=payload)
     response.raise_for_status()
     response = response.json()
     check_vk_request_error(response)
     return response['response']['album_id'], response['response']['upload_url']
 
 
-def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_path, comic_file_name):
+def save_photo_to_wall(vk_access, vk_group_id, upload_url, file_path, comic_file_name):
     with open(Path.joinpath(file_path, comic_file_name), 'rb') as photo:
         response = requests.post(upload_url, files={'photo': photo})
     response.raise_for_status()
     transfer_file_params = response.json()
 
     url = 'https://api.vk.com/method/photos.saveWallPhoto'
-    headers = {'Authorization': f'Bearer {vk_access_token}'}
     payload = {
         'group_id': vk_group_id,
         'server': transfer_file_params['server'],
@@ -47,11 +45,14 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
         'hash': transfer_file_params['hash'],
         'v': 5.131,
     }
-    response = requests.get(url, headers=headers, params=payload)
+    response = requests.get(url, headers=vk_access, params=payload)
     response.raise_for_status()
     save_file_params = response.json()
     check_vk_request_error(save_file_params)
+    return save_file_params
 
+
+def post_wall_photo(vk_access, vk_group_id, comic_alt, save_file_params):
     url = 'https://api.vk.com/method/wall.post'
     payload = {
         'attachments': f"photo{save_file_params['response'][0]['owner_id']}_{save_file_params['response'][0]['id']}",
@@ -59,7 +60,7 @@ def post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_alt, file_pa
         'message': comic_alt,
         'v': 5.131,
     }
-    response = requests.post(url, headers=headers, params=payload)
+    response = requests.post(url, headers=vk_access, params=payload)
     response.raise_for_status()
     response = response.json()
     check_vk_request_error(response)
@@ -87,6 +88,7 @@ def main():
     env.read_env()
     vk_access_token = env.str('VK_ACCESS_TOKEN')
     vk_group_id = env.int('VK_GROUP_ID')
+    vk_access = {'Authorization': f'Bearer {vk_access_token}'}
 
     file_path = Path.cwd()
     Path(file_path).mkdir(parents=True, exist_ok=True)
@@ -98,8 +100,9 @@ def main():
         with open(Path.joinpath(file_path, comic_file_name), 'wb') as file:
             file.write(comic.content)
         print(f'Публикуем комикс № {random_comic_id}')
-        album_id, upload_url = get_photos_wall_upload_server(vk_access_token, vk_group_id)
-        post_wall_photo(vk_access_token, vk_group_id, upload_url, comic_parameters['alt'], file_path, comic_file_name)
+        album_id, upload_url = get_photos_wall_upload_server(vk_access, vk_group_id)
+        save_file_params = save_photo_to_wall(vk_access, vk_group_id, upload_url, file_path, comic_file_name)
+        post_wall_photo(vk_access, vk_group_id, comic_parameters['alt'], save_file_params)
     except requests.exceptions.HTTPError as error:
         print(f'Ошибка сети.\nОшибка {error}')
     finally:
