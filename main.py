@@ -47,15 +47,17 @@ def save_photo_to_wall(vk_access, vk_group_id, upload_url, file_path, comic_file
     }
     response = requests.get(url, headers=vk_access, params=payload)
     response.raise_for_status()
-    save_file_params = response.json()
-    check_vk_request_error(save_file_params)
-    return save_file_params
+    photo_parameters = response.json()
+    check_vk_request_error(photo_parameters)
+    photo_owner_id = photo_parameters['response'][0]['owner_id']
+    photo_id = photo_parameters['response'][0]['id']
+    return photo_owner_id, photo_id
 
 
-def post_wall_photo(vk_access, vk_group_id, comic_alt, save_file_params):
+def post_wall_photo(vk_access, vk_group_id, comic_alt, photo_owner_id, photo_id):
     url = 'https://api.vk.com/method/wall.post'
     payload = {
-        'attachments': f"photo{save_file_params['response'][0]['owner_id']}_{save_file_params['response'][0]['id']}",
+        'attachments': f"photo{photo_owner_id}_{photo_id}",
         'owner_id': int(f'-{vk_group_id}'),
         'from_group': 1,
         'message': comic_alt,
@@ -102,8 +104,8 @@ def main():
             file.write(comic.content)
         print(f'Публикуем комикс № {random_comic_id}')
         album_id, upload_url = get_photos_wall_upload_server(vk_access, vk_group_id)
-        save_file_params = save_photo_to_wall(vk_access, vk_group_id, upload_url, file_path, comic_file_name)
-        post_wall_photo(vk_access, vk_group_id, comic_parameters['alt'], save_file_params)
+        photo_owner_id, photo_id = save_photo_to_wall(vk_access, vk_group_id, upload_url, file_path, comic_file_name)
+        post_wall_photo(vk_access, vk_group_id, comic_parameters['alt'], photo_owner_id, photo_id)
     except requests.exceptions.HTTPError as error:
         print(f'Ошибка сети.\nОшибка {error}')
     finally:
